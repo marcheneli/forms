@@ -79,51 +79,55 @@ func (s *Storage) Update(newName string, schemaId int) error {
 	return nil
 }
 
-func (s *Storage) GetSchemaName(id int) (string, error) {
+type Schema struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func (s *Storage) GetList() ([]Schema, error) {
 	const op = "storage.sqlite.schemas.Get"
 
-	stmt, err := s.db.Prepare("SELECT name FROM schemas WHERE id = ?")
+	stmt, err := s.db.Prepare("SELECT id, name FROM schemas")
 	if err != nil {
-		return "", fmt.Errorf("%s: prepare statement: %w", op, err)
+		return nil, fmt.Errorf("%s: failed to prepare statement: %w", op, err)
 	}
 
-	var schemaName string
+	queryResp, queryErr := stmt.Query()
 
-	err = stmt.QueryRow(id).Scan(&schemaName)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", storage.ErrSchemaNotFound
+		return nil, fmt.Errorf("%s: failed to query schema rows: %w", op, queryErr)
+	}
+
+	rows := make([]Schema, 0)
+
+	for queryResp.Next() {
+		var id int
+		var name string
+
+		if err := queryResp.Scan(&id, &name); err != nil {
+			return nil, fmt.Errorf("%s: failed to scan schema row: %w", op, err)
 		}
 
-		return "", fmt.Errorf("%s: execute statement: %w", op, err)
+		rows = append(rows, Schema{id, name})
 	}
 
-	return schemaName, nil
+	return rows, nil
 }
 
 func (s *Storage) Delete(id int) error {
 	const op = "storage.sqlite.schemas.Delete"
 
-	deleteFieldsStmt, err := s.db.Prepare("DELETE FROM fields WHERE schema_id = ?")
+	deleteStmt, err := s.db.Prepare(`
+		BEGIN TRANSACTION;
+			DELETE FROM fields WHERE schema_id = ?;
+			DELETE FROM schemas WHERE id = ?;
+		COMMIT;
+	`)
 	if err != nil {
 		return fmt.Errorf("%s: prepare statement: %w", op, err)
 	}
 
-	_, err = deleteFieldsStmt.Exec(id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return storage.ErrSchemaNotFound
-		}
-
-		return fmt.Errorf("%s: execute statement: %w", op, err)
-	}
-
-	stmt, err := s.db.Prepare("DELETE FROM schemas WHERE id = ?")
-	if err != nil {
-		return fmt.Errorf("%s: prepare statement: %w", op, err)
-	}
-
-	_, err = stmt.Exec(id)
+	_, err = deleteStmt.Exec(id, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.ErrSchemaNotFound

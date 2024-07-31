@@ -99,3 +99,40 @@ func (s *Storage) Delete(id int) error {
 
 	return nil
 }
+
+type Field struct {
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	SchemaId int    `json:"schemaId"`
+}
+
+func (s *Storage) GetList() ([]Field, error) {
+	const op = "storage.sqlite.fields.GetList"
+
+	stmt, err := s.db.Prepare("SELECT id, name, schemaId FROM fields")
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to prepare statement: %w", op, err)
+	}
+
+	queryResp, queryErr := stmt.Query()
+
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to query field rows: %w", op, queryErr)
+	}
+
+	rows := make([]Field, 0)
+
+	for queryResp.Next() {
+		var id int
+		var name string
+		var schemaId int
+
+		if err := queryResp.Scan(&id, &name); err != nil {
+			return nil, fmt.Errorf("%s: failed to scan field row: %w", op, err)
+		}
+
+		rows = append(rows, Field{id, name, schemaId})
+	}
+
+	return rows, nil
+}

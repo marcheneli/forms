@@ -17,10 +17,12 @@ import (
 
 	createSchema "github.com/marcheneli/forms/internal/http-server/handlers/schemas/create"
 	deleteSchema "github.com/marcheneli/forms/internal/http-server/handlers/schemas/delete"
+	listSchema "github.com/marcheneli/forms/internal/http-server/handlers/schemas/list"
 	updateSchema "github.com/marcheneli/forms/internal/http-server/handlers/schemas/update"
 
 	createField "github.com/marcheneli/forms/internal/http-server/handlers/fields/create"
 	deleteField "github.com/marcheneli/forms/internal/http-server/handlers/fields/delete"
+	listField "github.com/marcheneli/forms/internal/http-server/handlers/fields/list"
 	updateField "github.com/marcheneli/forms/internal/http-server/handlers/fields/update"
 
 	mwLogger "github.com/marcheneli/forms/internal/http-server/middleware/logger"
@@ -66,12 +68,14 @@ func main() {
 		r.Post("/", createSchema.New(log, schemasStorage))
 		r.Put("/", updateSchema.New(log, schemasStorage))
 		r.Delete("/", deleteSchema.New(log, schemasStorage))
+		r.Get("/", listSchema.New(log, schemasStorage))
 	})
 
 	router.Route("/fields", func(r chi.Router) {
 		r.Post("/", createField.New(log, fieldsStorage))
 		r.Put("/", updateField.New(log, fieldsStorage))
 		r.Delete("/", deleteField.New(log, fieldsStorage))
+		r.Get("/", listField.New(log, fieldsStorage))
 	})
 
 	log.Info("starting server", slog.String("address", cfg.Address))
