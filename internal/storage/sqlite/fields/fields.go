@@ -109,7 +109,7 @@ type Field struct {
 func (s *Storage) GetList() ([]Field, error) {
 	const op = "storage.sqlite.fields.GetList"
 
-	stmt, err := s.db.Prepare("SELECT id, name, schemaId FROM fields")
+	stmt, err := s.db.Prepare("SELECT id, name, schema_id FROM fields")
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to prepare statement: %w", op, err)
 	}
@@ -127,7 +127,7 @@ func (s *Storage) GetList() ([]Field, error) {
 		var name string
 		var schemaId int
 
-		if err := queryResp.Scan(&id, &name); err != nil {
+		if err := queryResp.Scan(&id, &name, &schemaId); err != nil {
 			return nil, fmt.Errorf("%s: failed to scan field row: %w", op, err)
 		}
 
